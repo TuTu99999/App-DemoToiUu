@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp" android:background="#F7F8F4">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="NoteLab" android:textSize="30sp" android:textStyle="bold" android:textColor="#173D35" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Ghi lại điều bạn muốn nhớ." android:textSize="13sp" android:textColor="#66766E" />
+        </LinearLayout>
+        <Button android:id="@+id/more" android:layout_width="48dp" android:layout_height="48dp"
+            android:text="⋮" android:textSize="24sp" android:contentDescription="Tùy chọn" style="?android:attr/borderlessButtonStyle" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+        <Button android:id="@+id/add" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="＋ Ghi chú" android:textAllCaps="false" />
+        <Button android:id="@+id/backup" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="Sao lưu" android:textAllCaps="false" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:layout_marginTop="4dp" android:background="@drawable/panel" android:paddingHorizontal="8dp">
+        <EditText android:id="@+id/query" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="48dp" android:hint="Tìm trong ghi chú…" android:singleLine="true"
+            android:textSize="15sp" android:inputType="text" android:imeOptions="actionSearch" android:background="@null" />
+        <Button android:id="@+id/search" android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="Tìm" android:textAllCaps="false" style="?android:attr/borderlessButtonStyle" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+        <EditText android:id="@+id/limit" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+            android:hint="Số note · trống = tất cả" android:textSize="12sp" android:inputType="number" android:maxLength="8" android:singleLine="true" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Workers" android:textSize="12sp" />
+        <Spinner android:id="@+id/workers" android:layout_width="112dp" android:layout_height="48dp" android:contentDescription="Số workers từ 1 đến 16" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical">
+        <Button android:id="@+id/api" android:layout_width="wrap_content" android:layout_height="48dp"
+            android:text="Lấy gợi ý (API)" android:textAllCaps="false" />
+        <ProgressBar android:id="@+id/apiProgress" android:layout_width="24dp" android:layout_height="24dp"
+            android:layout_marginHorizontal="6dp" android:visibility="gone" />
+        <TextView android:id="@+id/apiResult" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:maxLines="4" android:textSize="12sp"
+            android:text="Gợi ý viết ghi chú từ API." android:accessibilityLiveRegion="polite" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/progress" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="3dp" android:indeterminate="true" android:visibility="gone" />
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingVertical="8dp" android:text="Đang mở ghi chú…" android:textSize="12sp" android:textColor="#247567" android:accessibilityLiveRegion="polite" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:divider="@android:color/transparent" android:dividerHeight="8dp" android:clipToPadding="false" android:paddingBottom="8dp" />
+        <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center" android:text="Chưa có ghi chú\nBấm ＋ để viết note đầu tiên."
+            android:textColor="#66766E" android:textSize="15sp" android:lineSpacingExtra="8dp" />
+    </FrameLayout>
+    <LinearLayout android:id="@+id/demo" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:visibility="gone">
+        <CheckBox android:id="@+id/slow" android:layout_width="match_parent" android:layout_height="48dp"
+            android:text="Lưu chậm 1,5 giây để demo khóa" android:textSize="12sp" />
+        <ScrollView android:id="@+id/logScroll" android:layout_width="match_parent" android:layout_height="120dp" android:background="@drawable/panel">
+            <TextView android:id="@+id/log" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:padding="8dp" android:textSize="10sp" android:fontFamily="monospace" android:textColor="#344B42" android:textIsSelectable="true" />
+        </ScrollView>
+    </LinearLayout>
+</LinearLayout>
