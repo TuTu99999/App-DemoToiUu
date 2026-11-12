@@ -26,21 +26,15 @@
         <Button android:id="@+id/search" android:layout_width="wrap_content" android:layout_height="48dp"
             android:text="Tìm" android:textAllCaps="false" style="?android:attr/borderlessButtonStyle" />
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-        <EditText android:id="@+id/limit" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
-            android:hint="Số note · trống = tất cả" android:textSize="12sp" android:inputType="number" android:maxLength="8" android:singleLine="true" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Workers" android:textSize="12sp" />
-        <Spinner android:id="@+id/workers" android:layout_width="112dp" android:layout_height="48dp" android:contentDescription="Số workers từ 1 đến 16" />
-    </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical" android:layout_marginTop="4dp">
         <Button android:id="@+id/api" android:layout_width="wrap_content" android:layout_height="48dp"
-            android:text="Lấy gợi ý (API)" android:textAllCaps="false" />
+            android:text="Gợi ý hôm nay" android:textAllCaps="false" />
         <ProgressBar android:id="@+id/apiProgress" android:layout_width="24dp" android:layout_height="24dp"
             android:layout_marginHorizontal="6dp" android:visibility="gone" />
         <TextView android:id="@+id/apiResult" android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content" android:maxLines="4" android:textSize="12sp"
-            android:text="Gợi ý viết ghi chú từ API." android:accessibilityLiveRegion="polite" />
+            android:text="Chạm để lấy gợi ý viết ghi chú." android:accessibilityLiveRegion="polite" />
     </LinearLayout>
     <ProgressBar android:id="@+id/progress" style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent" android:layout_height="3dp" android:indeterminate="true" android:visibility="gone" />
@@ -55,9 +49,7 @@
     </FrameLayout>
     <LinearLayout android:id="@+id/demo" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:visibility="gone">
-        <CheckBox android:id="@+id/slow" android:layout_width="match_parent" android:layout_height="48dp"
-            android:text="Lưu chậm 1,5 giây để demo khóa" android:textSize="12sp" />
-        <ScrollView android:id="@+id/logScroll" android:layout_width="match_parent" android:layout_height="120dp" android:background="@drawable/panel">
+        <ScrollView android:id="@+id/logScroll" android:layout_width="match_parent" android:layout_height="136dp" android:background="@drawable/panel">
             <TextView android:id="@+id/log" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:padding="8dp" android:textSize="10sp" android:fontFamily="monospace" android:textColor="#344B42" android:textIsSelectable="true" />
         </ScrollView>

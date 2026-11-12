@@ -6,14 +6,14 @@ App ghi chú một màn hình, gồm 4 file Java và 1 file Kotlin cho coroutine
 
 | Chức năng | Cơ chế | Cách thao tác | Code |
 |---|---|---|---|
-| Mở danh sách đã lưu | AsyncTask | Mở app hoặc chọn ⋮ → Đọc lại danh sách. Loading hiện trong lúc đọc, sau đó hiển thị note. | `MainActivity.load()` |
+| Mở danh sách đã lưu | AsyncTask | Mở app hoặc chọn ⋮ → Tải lại danh sách. Loading hiện trong lúc đọc, sau đó hiển thị note. | `MainActivity.load()` |
 | Xuất một note `.txt` | Thread + Handler | Chạm note → Xuất .txt → chọn nơi lưu. Thread ghi UTF-8, Handler báo kết quả lên UI. | `MainActivity.exportNote()` |
-| Sao lưu khi tự động lưu | synchronized | Bật nhật ký và lưu chậm. Sửa note, ngừng gõ 0,6 giây, bấm Sao lưu tất cả ghi chú trong lúc đang ghi. | `NoteStore.save()`, `NoteStore.backup()` |
-| Tìm trong N hoặc tất cả note | ExecutorService | Nhập từ khóa, số note hoặc để trống, chọn 1–16 workers rồi bấm Tìm. Hiện số kết quả và thời gian. | `NoteSearch.find()` |
-| Lấy gợi ý qua API | Kotlin coroutine | Bấm Lấy gợi ý (API), vuốt danh sách hoặc mở note trong lúc server chờ 6 giây. Kết quả xuất hiện bên cạnh nút. | `ApiDemo.kt`, `MainActivity.callApi()` |
+| Sao lưu khi tự động lưu | synchronized | Bật nhật ký luồng và lưu chậm trong ⋮ → Cấu hình Lab. Sửa note, ngừng gõ 0,6 giây, bấm Sao lưu ngay trong lúc đang ghi. | `NoteStore.save()`, `NoteStore.backup()` |
+| Tìm trong N hoặc tất cả note | ExecutorService | Chọn 1–16 workers và giới hạn số note trong ⋮ → Cấu hình Lab, rồi nhập từ khóa và bấm Tìm. | `NoteSearch.find()` |
+| Lấy gợi ý qua API | Kotlin coroutine | Bấm Gợi ý hôm nay, vuốt danh sách hoặc mở note trong lúc server chờ 6 giây. Kết quả xuất hiện bên cạnh nút. | `ApiDemo.kt`, `MainActivity.callApi()` |
 
-Mở **⋮ → Ẩn / hiện nhật ký demo** để xem tên luồng và các bước xử lý. Logcat dùng tag `NoteLab`.
-Có thể thêm dữ liệu qua **⋮ → Thêm 160 note mẫu**.
+Mở **⋮ → Hiện nhật ký luồng** để xem tên luồng và các bước xử lý (đồng thời hiển thị chi tiết workers/ms khi tìm kiếm). Logcat dùng tag `NoteLab`.
+Có thể chỉnh thông số thử nghiệm tại **⋮ → Cấu hình Lab (Đa luồng)** và thêm dữ liệu qua **⋮ → Thêm 160 ghi chú mẫu**.
 
 ### API mẫu
 
@@ -25,7 +25,7 @@ python tools/demo-api.py
 
 Nút gọi mặc định dùng `http://10.0.2.2:8765/suggestion` trên Android Emulator.
 API mẫu lắng nghe localhost của máy tính, thực sự chờ 6 giây rồi trả JSON.
-Có thể đổi URL qua **⋮ → Địa chỉ API gợi ý** để dùng backend của Tú.
+Có thể đổi URL qua **⋮ → Cấu hình Lab (Đa luồng)** để dùng backend khác.
 Backend cần trả HTTP 200 và JSON UTF-8 theo mẫu sau.
 
 ```json
@@ -44,7 +44,7 @@ Tham khảo [hướng dẫn coroutine của Android](https://developer.android.c
 
 **Sao lưu** tạo bản sao tất cả note vào bộ nhớ riêng của app.
 Hai tác vụ tự động lưu và sao lưu dùng chung `fileLock`. Log hiển thị lúc chờ, vào và nhả khóa.
-Tùy chọn **Lưu chậm 1,5 giây** giúp quan sát lúc backup phải chờ ghi hoàn tất.
+Tùy chọn **Lưu chậm 1,5 giây** (trong **⋮ → Cấu hình Lab**) giúp quan sát lúc backup phải chờ ghi hoàn tất.
 
 ```text
 /data/user/0/com.example.notelab/files/notes.json

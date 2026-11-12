@@ -40,8 +40,10 @@ import java.util.concurrent.Future;
 /** Minimal one-screen app illustrating five threading cases. */
 @SuppressWarnings("deprecation")
 public class MainActivity extends Activity {
-    private static final int EXPORT = 10;
+    private static final int EXPORT = 10, DEFAULT_WORKERS = 4;
     private static final String DEFAULT_API = "http://10.0.2.2:8765/suggestion";
+    private static final String PREF_API = "apiUrl", PREF_WORKERS = "labWorkers",
+            PREF_LIMIT = "labLimit", PREF_SLOW = "labSlowSave";
     private final Handler main = new Handler(Looper.getMainLooper());
     private final List<Note> notes = new ArrayList<>(), visible = new ArrayList<>();
     private final ArrayDeque<String> logs = new ArrayDeque<>();
@@ -53,10 +55,8 @@ public class MainActivity extends Activity {
     private ArrayAdapter<Note> adapter;
     private AsyncTask<Void, Void, NoteStore.Snapshot> loader;
     private Future<?> searchTask;
-    private EditText query, limit;
-    private Spinner workers;
+    private EditText query;
     private TextView status, journal, empty;
-    private CheckBox slow;
     private AlertDialog editor;
     private Note pendingExport;
     private boolean alive = true, ready;
@@ -77,13 +77,8 @@ public class MainActivity extends Activity {
         root.requestApplyInsets();
         store = NoteStore.get(this);
         api = new ApiDemo(this::log);
-        query = view(R.id.query); limit = view(R.id.limit); workers = view(R.id.workers);
-        status = view(R.id.status); journal = view(R.id.log); empty = view(R.id.empty); slow = view(R.id.slow);
-        String[] choices = new String[NoteSearch.MAX_WORKERS];
-        for (int i = 0; i < choices.length; i++) choices[i] = String.valueOf(i + 1);
-        ArrayAdapter<String> options = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, choices);
-        options.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        workers.setAdapter(options); workers.setSelection(3);
+        query = view(R.id.query);
+        status = view(R.id.status); journal = view(R.id.log); empty = view(R.id.empty);
         ListView list = view(R.id.list);
         adapter = new ArrayAdapter<Note>(this, R.layout.row_note, visible) {
             @Override public View getView(int position, View row, ViewGroup parent) {
@@ -151,9 +146,9 @@ public class MainActivity extends Activity {
         body.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         body.setText(original.body);
         TextView hint = new TextView(this);
-        hint.setText("Tự động lưu sau khi ngừng gõ 0,6 giây."); hint.setTextSize(12);
+        hint.setText("Tự động lưu khi bạn ngừng gõ."); hint.setTextSize(12);
         Button backupButton = new Button(this);
-        backupButton.setText("Sao lưu tất cả ghi chú"); backupButton.setAllCaps(false);
+        backupButton.setText("Sao lưu ngay"); backupButton.setAllCaps(false);
         backupButton.setOnClickListener(v -> backup());
         form.addView(title); form.addView(body); form.addView(hint); form.addView(backupButton);
         TextWatcher changes = watcher(() -> {
@@ -196,7 +191,7 @@ public class MainActivity extends Activity {
         if (!ready || current == null || lastScheduledRevision == current.revision) return;
         NoteStore.Snapshot snapshot = current;
         lastScheduledRevision = snapshot.revision;
-        boolean demoSlow = slow.isChecked();
+        boolean demoSlow = getPreferences(MODE_PRIVATE).getBoolean(PREF_SLOW, false);
         store.writes.execute(() -> {
             try {
                 store.save(snapshot, demoSlow, this::log);
@@ -250,13 +245,17 @@ public class MainActivity extends Activity {
         String needle = query.getText().toString().trim();
         if (needle.isEmpty()) { cancelSearch(); showAll(); return; }
         int count = Integer.MAX_VALUE;
-        try {
-            String input = limit.getText().toString().trim();
-            if (!input.isEmpty()) count = Integer.parseInt(input);
-            if (count < 1) throw new NumberFormatException();
-        } catch (NumberFormatException e) { limit.setError("Nhập số note lớn hơn 0"); return; }
+        String limitPref = getPreferences(MODE_PRIVATE).getString(PREF_LIMIT, "").trim();
+        if (!limitPref.isEmpty()) {
+            try {
+                count = Integer.parseInt(limitPref);
+                if (count < 1) count = Integer.MAX_VALUE;
+            } catch (NumberFormatException ignored) { count = Integer.MAX_VALUE; }
+        }
+        int requested = Math.max(1, Math.min(NoteSearch.MAX_WORKERS,
+                getPreferences(MODE_PRIVATE).getInt(PREF_WORKERS, DEFAULT_WORKERS)));
         cancelSearch();
-        int run = searchRun, requested = workers.getSelectedItemPosition() + 1, maximum = count;
+        int run = searchRun, maximum = count;
         List<Note> snapshot = new ArrayList<>(notes);
         setBusy(true); status.setText("Đang tìm “" + needle + "”…");
         searchTask = searches.submit(() -> {
@@ -267,8 +266,11 @@ public class MainActivity extends Activity {
                     searchTask = null; setBusy(false);
                     visible.clear(); visible.addAll(result.matches); adapter.notifyDataSetChanged();
                     empty.setText("Không tìm thấy ghi chú phù hợp.");
-                    status.setText(String.format(Locale.US, "%d/%d note · %d workers · %.2f ms",
-                            result.matches.size(), result.scanned, result.workers, result.nanos / 1_000_000.0));
+                    boolean labVisible = view(R.id.demo).getVisibility() == View.VISIBLE;
+                    status.setText(labVisible
+                            ? String.format(Locale.US, "%d/%d note · %d workers · %.2f ms",
+                                    result.matches.size(), result.scanned, result.workers, result.nanos / 1_000_000.0)
+                            : result.matches.size() + " ghi chú phù hợp");
                     log("SEARCH · gộp và hiển thị kết quả");
                 });
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -290,44 +292,126 @@ public class MainActivity extends Activity {
         status.setText(notes.size() + " ghi chú · lưu trên máy");
     }
 
-    // CASE 5: only the API button waits. The list and editor remain interactive.
+    // CASE 5: only the suggestion button waits. The list and editor remain interactive.
     private void callApi() {
         view(R.id.api).setEnabled(false);
         view(R.id.apiProgress).setVisibility(View.VISIBLE);
         TextView result = view(R.id.apiResult);
-        result.setText("Đang chờ API… bạn vẫn có thể cuộn và mở note.");
-        String address = getPreferences(MODE_PRIVATE).getString("apiUrl", DEFAULT_API);
+        result.setText("Đang tải gợi ý… bạn vẫn có thể cuộn và mở ghi chú.");
+        String address = getPreferences(MODE_PRIVATE).getString(PREF_API, DEFAULT_API);
         api.fetch(address, result::setText, () -> {
             view(R.id.api).setEnabled(true);
             view(R.id.apiProgress).setVisibility(View.GONE);
         });
     }
 
-    private void configureApi() {
+    private void configureLab() {
+        android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(20), dp(8), dp(20), 0);
+
+        TextView workerLabel = new TextView(this);
+        workerLabel.setText("Số luồng tìm kiếm (Workers 1–16)");
+        workerLabel.setTextSize(12);
+        Spinner workerSpinner = new Spinner(this);
+        String[] choices = new String[NoteSearch.MAX_WORKERS];
+        for (int i = 0; i < choices.length; i++) choices[i] = String.valueOf(i + 1);
+        ArrayAdapter<String> options = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, choices);
+        options.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        workerSpinner.setAdapter(options);
+        int savedWorkers = Math.max(1, Math.min(NoteSearch.MAX_WORKERS, prefs.getInt(PREF_WORKERS, DEFAULT_WORKERS)));
+        workerSpinner.setSelection(savedWorkers - 1);
+
+        TextView limitLabel = new TextView(this);
+        limitLabel.setText("Giới hạn số note khi tìm (trống = tất cả)");
+        limitLabel.setTextSize(12);
+        limitLabel.setPadding(0, dp(8), 0, 0);
+        EditText limitInput = new EditText(this);
+        limitInput.setHint("Tất cả");
+        limitInput.setSingleLine();
+        limitInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        limitInput.setText(prefs.getString(PREF_LIMIT, ""));
+
+        CheckBox slowBox = new CheckBox(this);
+        slowBox.setText("Lưu chậm 1,5 giây (demo khóa đồng bộ)");
+        slowBox.setChecked(prefs.getBoolean(PREF_SLOW, false));
+
+        CheckBox logBox = new CheckBox(this);
+        logBox.setText("Hiện nhật ký luồng ở cuối màn hình");
+        logBox.setChecked(view(R.id.demo).getVisibility() == View.VISIBLE);
+
+        TextView apiLabel = new TextView(this);
+        apiLabel.setText("Địa chỉ API gợi ý");
+        apiLabel.setTextSize(12);
+        apiLabel.setPadding(0, dp(8), 0, 0);
         EditText address = new EditText(this);
         address.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        address.setText(getPreferences(MODE_PRIVATE).getString("apiUrl", DEFAULT_API));
-        new AlertDialog.Builder(this).setTitle("Địa chỉ API gợi ý").setView(address)
-                .setNegativeButton("Hủy", null).setPositiveButton("Lưu", (dialog, which) ->
-                        getPreferences(MODE_PRIVATE).edit().putString("apiUrl", address.getText().toString().trim()).apply()).show();
+        address.setText(prefs.getString(PREF_API, DEFAULT_API));
+
+        form.addView(workerLabel); form.addView(workerSpinner);
+        form.addView(limitLabel); form.addView(limitInput);
+        form.addView(slowBox); form.addView(logBox);
+        form.addView(apiLabel); form.addView(address);
+        ScrollView scroll = new ScrollView(this); scroll.addView(form);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Cấu hình Lab (Đa luồng)")
+                .setView(scroll)
+                .setNeutralButton("Mặc định", null)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Lưu", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                workerSpinner.setSelection(DEFAULT_WORKERS - 1);
+                limitInput.setText("");
+                limitInput.setError(null);
+                slowBox.setChecked(false);
+                address.setText(DEFAULT_API);
+            });
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String limitText = limitInput.getText().toString().trim();
+                if (!limitText.isEmpty()) {
+                    try {
+                        if (Integer.parseInt(limitText) < 1) throw new NumberFormatException();
+                    } catch (NumberFormatException e) {
+                        limitInput.setError("Nhập số lớn hơn 0 hoặc để trống");
+                        return;
+                    }
+                }
+                String apiText = address.getText().toString().trim();
+                prefs.edit()
+                        .putInt(PREF_WORKERS, workerSpinner.getSelectedItemPosition() + 1)
+                        .putString(PREF_LIMIT, limitText)
+                        .putBoolean(PREF_SLOW, slowBox.isChecked())
+                        .putString(PREF_API, apiText.isEmpty() ? DEFAULT_API : apiText)
+                        .apply();
+                view(R.id.demo).setVisibility(logBox.isChecked() ? View.VISIBLE : View.GONE);
+                dialog.dismiss();
+                toast("Đã lưu cấu hình Lab");
+            });
+        });
+        dialog.show();
     }
 
     private void menu(View anchor) {
         PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add(0, 1, 0, "Đọc lại danh sách (AsyncTask)").setEnabled(loader == null);
-        menu.getMenu().add(0, 2, 1, "Thêm 160 note mẫu").setEnabled(ready);
-        menu.getMenu().add(0, 3, 2, "Ẩn / hiện nhật ký demo");
-        menu.getMenu().add(0, 4, 3, "Địa chỉ API gợi ý");
+        boolean logVisible = view(R.id.demo).getVisibility() == View.VISIBLE;
+        menu.getMenu().add(0, 1, 0, "Tải lại danh sách").setEnabled(loader == null);
+        menu.getMenu().add(0, 2, 1, "Thêm 160 ghi chú mẫu").setEnabled(ready);
+        menu.getMenu().add(0, 3, 2, logVisible ? "Ẩn nhật ký luồng" : "Hiện nhật ký luồng");
+        menu.getMenu().add(0, 4, 3, "Cấu hình Lab (Đa luồng)");
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) { saveNow(); load(); }
             if (item.getItemId() == 2) new AlertDialog.Builder(this)
-                    .setMessage("Thêm 160 note mẫu? Các note hiện có được giữ lại.")
+                    .setMessage("Thêm 160 ghi chú mẫu? Các ghi chú hiện có được giữ lại.")
                     .setNegativeButton("Hủy", null).setPositiveButton("Thêm mẫu", (d, which) -> samples()).show();
             if (item.getItemId() == 3) {
                 View demo = view(R.id.demo);
                 demo.setVisibility(demo.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
             }
-            if (item.getItemId() == 4) configureApi();
+            if (item.getItemId() == 4) configureLab();
             return true;
         });
         menu.show();
@@ -368,7 +452,7 @@ public class MainActivity extends Activity {
     }
     private void setBusy(boolean busy) { view(R.id.progress).setVisibility(busy ? View.VISIBLE : View.GONE); }
     private void setActions(boolean enabled) {
-        for (int id : new int[]{R.id.add, R.id.backup, R.id.search, R.id.query, R.id.limit, R.id.workers, R.id.list}) view(id).setEnabled(enabled);
+        for (int id : new int[]{R.id.add, R.id.backup, R.id.search, R.id.query, R.id.list}) view(id).setEnabled(enabled);
     }
     private static String filename(String title) {
         String clean = title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_");

@@ -36,6 +36,34 @@ android {
     }
 }
 
+def debugKeystoreFile = rootProject.file('build/debug.keystore')
+
+def ensureDebugKeystore = tasks.register('ensureDebugKeystore', Exec) {
+    outputs.file(debugKeystoreFile)
+    onlyIf { !debugKeystoreFile.exists() }
+    doFirst {
+        debugKeystoreFile.parentFile.mkdirs()
+    }
+    def isWin = System.getProperty('os.name').toLowerCase().contains('win')
+    def keytoolPath = new File(System.getProperty('java.home'), isWin ? 'bin/keytool.exe' : 'bin/keytool').absolutePath
+    commandLine(
+        keytoolPath, '-genkeypair',
+        '-keystore', debugKeystoreFile.absolutePath,
+        '-storepass', 'android',
+        '-keypass', 'android',
+        '-alias', 'androiddebugkey',
+        '-dname', 'CN=NoteLab Debug',
+        '-keyalg', 'RSA',
+        '-validity', '10000'
+    )
+}
+
+tasks.configureEach {
+    if (name == 'validateSigningDebug' || name == 'validateSigningDebugAndroidTest') {
+        dependsOn(ensureDebugKeystore)
+    }
+}
+
 dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
 }

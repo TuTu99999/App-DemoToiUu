@@ -58,7 +58,7 @@ class ApiDemo(private val log: Consumer<String>) {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                result.accept("Gọi API thất bại · ${error.message}")
+                result.accept("Không lấy được gợi ý · ${error.message}")
                 log.accept("API · lỗi ${error.message}")
             } finally {
                 if (isActive) finished.run()
